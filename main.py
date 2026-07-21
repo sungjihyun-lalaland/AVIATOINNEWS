@@ -5,7 +5,7 @@ from email.mime.text import MIMEText
 import feedparser
 from google import genai
 
-# 1. 구글 뉴스 RSS에서 항공 뉴스 수집
+# 1. 구글 뉴스 RSS 수집
 def fetch_aviation_news():
     rss_url = (
         "https://news.google.com/rss/search?"
@@ -19,9 +19,13 @@ def fetch_aviation_news():
     
     return "\n".join(articles)
 
-# 2. Gemini API로 한국어 브리핑 요약 생성
+# 2. Gemini API 뉴스 요약
 def summarize_news(news_text):
-    client = genai.Client(api_key=os.environ.get("GEMINI_API_KEY"))
+    api_key = os.environ.get("GEMINI_API_KEY")
+    if not api_key:
+        raise ValueError("GEMINI_API_KEY가 설정되지 않았습니다.")
+
+    client = genai.Client(api_key=api_key)
     
     prompt = f"""
 다음은 지난 24시간 동안 수집된 글로벌 항공 업계 뉴스 헤드라인과 링크 목록입니다.
@@ -30,7 +34,6 @@ def summarize_news(news_text):
 {news_text}
 
 위 뉴스들을 분석하여 한국어로 깔끔한 '일간 글로벌 항공 뉴스 브리핑' 리포트를 작성해 주세요.
-특히, 대한항공과 대한민국, 이시아 태평양 항공 산업 관련 뉴스는 반드시 포함해 주세요.
 HTML 형식(이메일 발송용)으로 작성해야 하며, 다음 규칙을 따라주세요:
 1. 가독성 높은 깔끔한 HTML 태그 사용 (<h2>, <ul>, <li>, <a> 등 사용, <html>/<body> 제외).
 2. 카테고리별 분류 (예: 항공사 동향, 제조사/기술, 규제/시장 트렌드 등).
@@ -44,11 +47,14 @@ HTML 형식(이메일 발송용)으로 작성해야 하며, 다음 규칙을 따
     )
     return response.text
 
-# 3. 이메일 발송
+# 3. 이메일 전송
 def send_email(subject, html_content):
     sender_email = os.environ.get("SENDER_EMAIL")
     sender_password = os.environ.get("SENDER_PASSWORD")
     receiver_email = os.environ.get("RECEIVER_EMAIL")
+
+    if not all([sender_email, sender_password, receiver_email]):
+        raise ValueError("이메일 관련 환경 변수(SENDER_EMAIL, SENDER_PASSWORD, RECEIVER_EMAIL)를 확인해 주세요.")
 
     msg = MIMEMultipart("alternative")
     msg["Subject"] = subject
@@ -67,3 +73,5 @@ if __name__ == "__main__":
     if news_data:
         summary_html = summarize_news(news_data)
         send_email("[매일 브리핑] 전날 글로벌 항공 업계 주요 뉴스", summary_html)
+    else:
+        print("수집된 뉴스가 없습니다.")
