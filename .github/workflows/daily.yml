@@ -1,0 +1,29 @@
+name: Daily Aviation News Email
+
+on:
+  schedule:
+    - cron: '0 23 * * *' # 한국시간 매일 아침 8시 자동 실행
+  workflow_dispatch: # 수동 테스트용 버튼 활성화
+
+jobs:
+  run-script:
+    runs-on: ubuntu-latest
+    steps:
+      - name: 코드 가져오기
+        uses: actions/checkout@v4
+
+      - name: 파이썬 설정
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: 필요 라이브러리 설치
+        run: pip install requests feedparser google-genai
+
+      - name: 스크립트 실행
+        env:
+          GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
+          SENDER_EMAIL: ${{ secrets.SENDER_EMAIL }}
+          SENDER_PASSWORD: ${{ secrets.SENDER_PASSWORD }}
+          RECEIVER_EMAIL: ${{ secrets.RECEIVER_EMAIL }}
+        run: python main.py
